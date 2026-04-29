@@ -89,7 +89,11 @@ curl http://localhost:8080/cpu/high
 
 **1.连接进程，选择你的 Spring Boot 进程。**
 
-```
+Arthas的官方文档：https://arthas.aliyun.com/
+
+```bash
+# 下载 arthas-boot,
+curl -O https://arthas.aliyun.com/arthas-boot.jar
 java -jar arthas-boot.jar
 ```
 
