@@ -71,9 +71,14 @@ public class CpuController {
 
 多次访问，造成cpu瞬间飙升、风扇狂转
 
+**注意复制到终端中会有反斜杠（/localhost:8080/cpu/high\）**
+
 ```bash
-curl http://localhost:8080/cpu/high
+for i in {1..100}; do curl -s http://localhost:8080/cpu/high; done
 ```
+
+### 图表类grafana的cpu升高
+![grafana的cpu升高.png](/Users/maqidi/Code/me/jvm-tuning/assets/grafana的cpu升高.png)
 
 ### Arthas 排查流程（CPU）
 
@@ -231,9 +236,15 @@ public class MemoryLeakController {
 - Full GC 增多
 - 最终 OOM
 
+**注意复制到终端中会有反斜杠(/mem/leak\)**
+
 ```bash
-for i in {1..1000}; do curl http://localhost:8080/mem/leak; done
+for i in {1..1000}; do curl -s http://localhost:8080/mem/leak; done
 ```
+
+### 图表类grafana的内存堆使用
+
+![image-20260529164108500](/Users/maqidi/Code/me/jvm-tuning/assets/图表类grafana的内存堆使用.png)
 
 ### Arthas 排查流程（内存泄漏）
 
@@ -350,11 +361,35 @@ public class GcController {
 }
 ```
 
-频繁调用
+**频繁调用（注意复制到终端中会有反斜杠 /gc/storm\）**
 
 ```bash
 while true; do curl http://localhost:8080/gc/storm; done
 ```
+
+### 图表类grafana的GC使用
+
+![image-20260529164832017](/Users/maqidi/Code/me/jvm-tuning/assets/图表grafana显示gc频率暴增.png)
+
+先看懂图的基本信息
+
+- **纵轴**：`ops/s`（每秒 GC 操作次数），代表单位时间内 GC 事件发生的频率。
+
+- **横轴**：时间轴，图中关键节点是 `16:45`，是 GC 行为突变的时间点。
+
+- **三条线**：对应 G1GC 中三种不同类型的 GC 事件
+
+  | 颜色 |                  事件名称                   |                             含义                             |
+  | :--: | :-----------------------------------------: | :----------------------------------------------------------: |
+  | 绿色 |   `end of major GC (G1 Compaction Pause)`   | 大 GC（混合 GC/Full GC），主要是老年代的整理压缩，会带来较长的 STW 停顿 |
+  | 黄色 |   `end of minor GC (G1 Evacuation Pause)`   | 年轻代 GC（转移暂停）， Eden 区满了之后的对象复制，是 G1 最常见的 GC |
+  | 蓝色 | `end of minor GC (G1 Humongous Allocation)` | 大对象分配触发的 GC，当分配的对象超过 Region 一半大小时触发  |
+
+16:45 之后，黄色线（Minor GC）的 ops/s 从 0 急剧飙升到近 20000 ops/s，意味着：
+应用在此时段的对象分配速度突然暴涨，年轻代 Eden 区被快速填满，导致 Minor GC 频繁触发。
+这种高频 Minor GC 会直接消耗大量 CPU 资源，甚至可能伴随用户线程的短暂停顿，影响接口响应。
+
+
 
 ### Arthas 排查流程（GC）：
 
@@ -487,6 +522,16 @@ tt -t com.qidi.jvmtuning.demos.web.GcController gcStorm
 - **解决方案**：
 - **治标**：增加元空间大小上限 -XX:MaxMetaspaceSize=256m，并添加元空间GC日志 -Xlog:gc+metaspace*=trace 以便观察。
 - **治本**：排查代码中持有类加载器引用的地方，特别是线程局部变量（ThreadLocal）和全局静态变量。确保应用上下文在关闭时能被完全清理。或者，优化网关逻辑，避免频繁创建/销毁上下文。
+
+# 案例四：参考这个调优测试策略
+
+https://www.cnblogs.com/jaigejiayou/p/16527764.html
+
+
+
+# 正常的展示行为：
+
+https://cloud.tencent.com/developer/article/1903959
 
 
 

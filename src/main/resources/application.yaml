@@ -1,3 +1,16 @@
 server:
-  port:
+  port: 8080
+
+# 配置监控点配置，配置springboot3.x 的Prometheus和Grafana看板，看板搭建参考ddd-one-module-style项目中的搭建
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info  # 所有的都监控
+
+  endpoint:
+    prometheus:
+      enabled: true   # 你已经有了，正确
+    health:
+      enabled: true
 
